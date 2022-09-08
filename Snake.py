@@ -19,8 +19,8 @@ class SnakePiece(Sprite):
         self.vel = sper(0.3)
         self.angVel = sper(0.01)
         self.ang = random.uniform(0,math.pi*2) if self.id == 0 else snake[self.id-1].ang
-        self.x = xper(0.5) if self.id == 0 else snake[self.id-1].x - math.cos(self.ang)
-        self.y = yper(0.5) if self.id == 0 else snake[self.id-1].y - math.sin(self.ang)
+        self.x = xper(0.5) if self.id == 0 else snake[self.id-1].x
+        self.y = yper(0.5) if self.id == 0 else snake[self.id-1].y
 
         snake.append(self)
 
@@ -32,13 +32,13 @@ class SnakePiece(Sprite):
             self.targetY = mouseY if self.id == 0 else snake[self.id-1].y
 
             targetAng = getAngle2(self.ang,(self.x, self.y),(self.targetX, self.targetY))
-            targetDist = getDist((self.targetX,self.targetY),(self.x,self.y))
+            targetDist = getDist((self.x,self.y),(self.targetX,self.targetY))
 
-            if self.id > 0:
+            if self.id == 0:
+                self.checkHeadCol()
+            else:
                 self.vel = sper(0.4) if targetDist > self.radius*0.75 else sper(0.2) if targetDist < self.radius*0.75 else sper(0.3)
                 self.angVel = sper(0.02) if targetDist > self.radius*0.75 or targetDist < self.radius*0.75 else sper(0.01)
-            else:
-                self.checkHeadCol()
 
             self.ang += self.angVel * deltaT if targetAng > self.ang else -self.angVel * deltaT
             self.ang %= math.pi*2
@@ -47,22 +47,21 @@ class SnakePiece(Sprite):
 
     def draw(self):
 
-        color = (255,255,0) if self.fixed else (0,255,0) if self.id % 3 == 0 else (0,100,0)
+        color = (0,255,0) if self.id % 3 == 0 else (0,100,0)
 
-        pygame.draw.circle(windowSurface, modifyColorPerc(color,0.5), (self.x, self.y), self.radius)
-        pygame.draw.circle(windowSurface, color, (self.x, self.y), self.radius*0.9)
+        pygame.draw.circle(windowSurface, modifyColorPerc(color,0.75), (self.x, self.y), self.radius)
+        pygame.draw.circle(windowSurface, color, (self.x, self.y), self.radius*0.8)
+
         if self.id == 0:
             pygame.draw.circle(windowSurface, (255,255,255), (self.x + math.cos(self.ang) * self.radius*0.4 + math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.4 + math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.4)
             pygame.draw.circle(windowSurface, (255,255,255), (self.x + math.cos(self.ang) * self.radius*0.4 - math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.4 - math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.4)
             pygame.draw.circle(windowSurface, (100,0,0), (self.x + math.cos(self.ang) * self.radius*0.55 + math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.55 + math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.2)
             pygame.draw.circle(windowSurface, (100,0,0), (self.x + math.cos(self.ang) * self.radius*0.55 - math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.55 - math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.2)
 
-        # if not self.id % 5: createTextCenter(tFont,str(self.id),(255,255,255),None,self.x,self.y+self.radius*2)
-
     def checkHeadCol(self):
 
         for piece in snake:
-            if piece.id > 5 and piece.id % 2 == 0:
+            if piece.id > 5 and piece.id % 3 == 0:
                 if getDist((piece.x,piece.y),(self.x,self.y)) < self.radius*2:
                     manager[0].gameOver = True
 
@@ -70,9 +69,8 @@ class SnakePiece(Sprite):
             if getDist((piece.x,piece.y),(self.x,self.y)) < self.radius*2:
                 if not piece.grabbed:
                     piece.grabbed = True
-                    for n in range(3):
-                        addSprite(SnakePiece(len(snake)))
-                    manager[0].score += 33
+                    manager[0].score += 11
+                    addSprite(SnakePiece(len(snake)))
 
 class Food(Sprite):
 
@@ -100,23 +98,23 @@ class Food(Sprite):
     def process(self):
 
         if not manager[0].gameOver and not manager[0].pause:
-            self.timer = max(self.timer - deltaT, 0)        
+            self.timer = max(self.timer - deltaT, 0)
         self.glowCD = max(self.glowCD - deltaT, 0)
 
         if self.glowCD == 0:
-            self.glowCD = 1 if self.timer > 2 else 0.2
+            self.glowCD = 0.2 if self.timer <= 2 else 0.5 if self.timer <= 5 else 1
 
         if self.timer == 0 or self.grabbed:
             self.radius -= deltaT*50
 
-        self.ang += self.angVel * deltaT
-
         if self.radius < sper(0.002):
             spritesToRemove.append(self)
 
+        self.ang += self.angVel * deltaT
+
     def draw(self):
 
-        color = (255,255,255) if self.glowCD <= 0.1 else (100,0,0)
+        color = (0,255,255) if self.glowCD <= 0.1 else (100,0,0)
         for i in range(10):
             pygame.draw.line(windowSurface, modifyColorPerc(color,2),(self.x + math.cos(self.ang - math.pi/2) * self.radius*(1-i*0.2), self.y + math.sin(self.ang - math.pi/2) * self.radius*(1-i*0.2)), (self.x + math.cos(self.ang) * self.radius*(1-i*0.2), self.y + math.sin(self.ang) * self.radius*(1-i*0.2)), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x + math.cos(self.ang) * self.radius, self.y + math.sin(self.ang) * self.radius), (self.x + math.cos(self.ang + math.pi/2) * self.radius, self.y + math.sin(self.ang + math.pi/2) * self.radius), int(self.radius/4))
@@ -124,16 +122,12 @@ class Food(Sprite):
         pygame.draw.line(windowSurface, color, (self.x - math.cos(self.ang) * self.radius, self.y - math.sin(self.ang) * self.radius), (self.x + math.cos(self.ang - math.pi/2) * self.radius, self.y + math.sin(self.ang - math.pi/2) * self.radius), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x + math.cos(self.ang - math.pi/2) * self.radius, self.y + math.sin(self.ang - math.pi/2) * self.radius), (self.x + math.cos(self.ang) * self.radius, self.y + math.sin(self.ang) * self.radius), int(self.radius/4))
 
-        # createTextCenter(tFont,str(self.timer),(255,255,255),None,self.x,self.y+self.radius*2)
-        # createTextCenter(tFont,str(self.glowCD),(255,255,255),None,self.x,self.y+self.radius*4)
-
 class Manager(Sprite):
 
     def __init__(self):
 
         self.z = -2
         self.showFPS = False
-        self.escPressed = False
         self.fPressed = False
         self.pPressed = False
         self.gameOver = False
@@ -149,13 +143,12 @@ class Manager(Sprite):
             for i in range(5):
                 addSprite(SnakePiece(i))
 
-        if not food:
+        if len(food) < 3:
             addSprite(Food())
 
-        if not self.escPressed:
-            if keys[pygame.K_ESCAPE]:
-                pygame.quit()
-                sys.exit()
+        if keys[pygame.K_ESCAPE]:
+            pygame.quit()
+            sys.exit()
 
         if not self.fPressed:
             if keys[pygame.K_f]:
@@ -171,9 +164,8 @@ class Manager(Sprite):
         if self.gameOver and mouseLeft:
             self.reset()
 
-        if not keys[pygame.K_ESCAPE]: self.escPressed = False
         if not keys[pygame.K_f]: self.fPressed = False
-        if not keys[pygame.K_p]: self.pPressed = False        
+        if not keys[pygame.K_p]: self.pPressed = False
 
     def draw(self):
 
@@ -181,7 +173,7 @@ class Manager(Sprite):
 
         if self.gameOver:
             createTextCenter(bFont,'GAME OVER',(255,255,255),None,xper(0.5),yper(0.45))
-            createTextCenter(mFont,'Press LMB to Restart',(0,255,125),None,xper(0.5),yper(0.55))
+            createTextCenter(mFont,'Press LMB to Restart',(0,255,255),None,xper(0.5),yper(0.55))
 
         if self.pause:
             self.pauseBlinkCD += deltaT
@@ -257,7 +249,6 @@ pygame.display.set_caption('Snake')
 
 bFont = pygame.font.Font(None, int(sper(0.128)))
 mFont = pygame.font.Font(None, int(sper(0.0512)))
-sFont = pygame.font.Font(None, int(sper(0.0256)))
 tFont = pygame.font.Font(None, int(sper(0.0192)))
 
 deltaT = 0
@@ -266,7 +257,6 @@ clock = pygame.time.Clock()
 keys = None
 mouseX = mouseY = 0
 mouseLeft = mouseRight = False
-background = (0,0,0)
 sprites = []
 manager = []
 snake = []
@@ -288,7 +278,7 @@ while True:
     mouseX, mouseY = pygame.mouse.get_pos()
     mouseLeft, mouseMiddle, mouseRight = pygame.mouse.get_pressed()
 
-    windowSurface.fill(background)
+    windowSurface.fill((0,0,0))
 
     sprites.sort(key=lambda x: x.z, reverse=True)
 
