@@ -31,37 +31,38 @@ class SnakePiece(Sprite):
             self.targetX = mouseX if self.id == 0 else snake[self.id-1].x
             self.targetY = mouseY if self.id == 0 else snake[self.id-1].y
 
-            pointAng = getAngle2(self.ang,(self.x, self.y),(self.targetX, self.targetY))
+            targetAng = getAngle2(self.ang,(self.x, self.y),(self.targetX, self.targetY))
             targetDist = getDist((self.targetX,self.targetY),(self.x,self.y))
 
             if self.id > 0:
-                if targetDist > self.radius:
-                    self.vel = sper(0.4)
-                    self.angVel = sper(0.02)
-                elif targetDist < self.radius:
-                    self.vel = sper(0.2)
-                    self.angVel = sper(0.02)
-                else:
-                    self.vel = sper(0.3)
-                    self.angVel = sper(0.01)
+                self.vel = sper(0.4) if targetDist > self.radius*0.75 else sper(0.2) if targetDist < self.radius*0.75 else sper(0.3)
+                self.angVel = sper(0.02) if targetDist > self.radius*0.75 or targetDist < self.radius*0.75 else sper(0.01)
             else:
                 self.checkHeadCol()
 
-            self.ang += self.angVel * deltaT if pointAng > self.ang else -self.angVel * deltaT
+            self.ang += self.angVel * deltaT if targetAng > self.ang else -self.angVel * deltaT
             self.ang %= math.pi*2
             self.x += math.cos(self.ang)*self.vel*deltaT
             self.y += math.sin(self.ang)*self.vel*deltaT
 
     def draw(self):
 
-        pygame.draw.circle(windowSurface, (0,155,0), (self.x, self.y), self.radius)
-        pygame.draw.circle(windowSurface, (0,255,0), (self.x, self.y), self.radius*0.9)
+        color = (255,255,0) if self.fixed else (0,255,0) if self.id % 3 == 0 else (0,100,0)
+
+        pygame.draw.circle(windowSurface, modifyColorPerc(color,0.5), (self.x, self.y), self.radius)
+        pygame.draw.circle(windowSurface, color, (self.x, self.y), self.radius*0.9)
+        if self.id == 0:
+            pygame.draw.circle(windowSurface, (255,255,255), (self.x + math.cos(self.ang) * self.radius*0.4 + math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.4 + math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.4)
+            pygame.draw.circle(windowSurface, (255,255,255), (self.x + math.cos(self.ang) * self.radius*0.4 - math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.4 - math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.4)
+            pygame.draw.circle(windowSurface, (100,0,0), (self.x + math.cos(self.ang) * self.radius*0.55 + math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.55 + math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.2)
+            pygame.draw.circle(windowSurface, (100,0,0), (self.x + math.cos(self.ang) * self.radius*0.55 - math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.55 - math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.2)
+
         # if not self.id % 5: createTextCenter(tFont,str(self.id),(255,255,255),None,self.x,self.y+self.radius*2)
 
     def checkHeadCol(self):
 
         for piece in snake:
-            if piece.id > 4:
+            if piece.id > 5 and piece.id % 2 == 0:
                 if getDist((piece.x,piece.y),(self.x,self.y)) < self.radius*2:
                     manager[0].gameOver = True
 
@@ -81,15 +82,16 @@ class Food(Sprite):
         self.ang = random.uniform(0,math.pi*2)
         self.angVel = sper(0.03)
         self.radius = sper(0.01)
-        self.glowCD = 0
+        self.glowCD = 1
         self.grabbed = False
+        self.timer = 10
 
         reroll = True
         while reroll:
             self.x, self.y = random.randint(xper(0.1),screenX-xper(0.1)), random.randint(yper(0.1),screenY-yper(0.1))
             reroll = False
             for piece in snake:
-                if getDist((piece.x,piece.y),(self.x,self.y)) < self.radius*2:
+                if getDist((piece.x,piece.y),(self.x,self.y)) < self.radius*10:
                     reroll = True
                     break
 
@@ -97,27 +99,33 @@ class Food(Sprite):
 
     def process(self):
 
+        if not manager[0].gameOver and not manager[0].pause:
+            self.timer = max(self.timer - deltaT, 0)        
         self.glowCD = max(self.glowCD - deltaT, 0)
 
         if self.glowCD == 0:
-            self.glowCD = 0.5
+            self.glowCD = 1 if self.timer > 2 else 0.2
+
+        if self.timer == 0 or self.grabbed:
+            self.radius -= deltaT*50
 
         self.ang += self.angVel * deltaT
 
-        if self.grabbed:
-            self.radius -= deltaT*50
-            if self.radius < sper(0.002):
-                spritesToRemove.append(self)
+        if self.radius < sper(0.002):
+            spritesToRemove.append(self)
 
     def draw(self):
 
-        color = (125,0,0) if self.glowCD > 0.05 else (255,255,0)
+        color = (255,255,255) if self.glowCD <= 0.1 else (100,0,0)
         for i in range(10):
             pygame.draw.line(windowSurface, modifyColorPerc(color,2),(self.x + math.cos(self.ang - math.pi/2) * self.radius*(1-i*0.2), self.y + math.sin(self.ang - math.pi/2) * self.radius*(1-i*0.2)), (self.x + math.cos(self.ang) * self.radius*(1-i*0.2), self.y + math.sin(self.ang) * self.radius*(1-i*0.2)), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x + math.cos(self.ang) * self.radius, self.y + math.sin(self.ang) * self.radius), (self.x + math.cos(self.ang + math.pi/2) * self.radius, self.y + math.sin(self.ang + math.pi/2) * self.radius), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x + math.cos(self.ang + math.pi/2) * self.radius, self.y + math.sin(self.ang + math.pi/2) * self.radius), (self.x - math.cos(self.ang) * self.radius, self.y - math.sin(self.ang) * self.radius), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x - math.cos(self.ang) * self.radius, self.y - math.sin(self.ang) * self.radius), (self.x + math.cos(self.ang - math.pi/2) * self.radius, self.y + math.sin(self.ang - math.pi/2) * self.radius), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x + math.cos(self.ang - math.pi/2) * self.radius, self.y + math.sin(self.ang - math.pi/2) * self.radius), (self.x + math.cos(self.ang) * self.radius, self.y + math.sin(self.ang) * self.radius), int(self.radius/4))
+
+        # createTextCenter(tFont,str(self.timer),(255,255,255),None,self.x,self.y+self.radius*2)
+        # createTextCenter(tFont,str(self.glowCD),(255,255,255),None,self.x,self.y+self.radius*4)
 
 class Manager(Sprite):
 
