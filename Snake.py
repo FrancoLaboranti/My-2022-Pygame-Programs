@@ -21,6 +21,7 @@ class SnakePiece(Sprite):
         self.ang = random.uniform(0,math.pi*2) if self.id == 0 else snake[self.id-1].ang
         self.x = xper(0.5) if self.id == 0 else snake[self.id-1].x
         self.y = yper(0.5) if self.id == 0 else snake[self.id-1].y
+        self.color = (255,200,0) if self.id % 50 == 0 else (0,0,0) if self.id % 10 == 0 else randColorInRange(0,20,30,60,0,20)
 
         snake.append(self)
 
@@ -47,10 +48,7 @@ class SnakePiece(Sprite):
 
     def draw(self):
 
-        color = (0,255,0) if self.id % 3 == 0 else (0,100,0)
-
-        pygame.draw.circle(windowSurface, modifyColorPerc(color,0.75), (self.x, self.y), self.radius)
-        pygame.draw.circle(windowSurface, color, (self.x, self.y), self.radius*0.8)
+        pygame.draw.circle(windowSurface, self.color, (self.x, self.y), self.radius)
 
         if self.id == 0:
             pygame.draw.circle(windowSurface, (255,255,255), (self.x + math.cos(self.ang) * self.radius*0.4 + math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.4 + math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.4)
@@ -69,8 +67,9 @@ class SnakePiece(Sprite):
             if getDist((piece.x,piece.y),(self.x,self.y)) < self.radius*2:
                 if not piece.grabbed:
                     piece.grabbed = True
-                    manager[0].score += 11
-                    addSprite(SnakePiece(len(snake)))
+                    manager[0].score += 100
+                    for i in range(10):
+                        addSprite(SnakePiece(len(snake)))
 
 class Food(Sprite):
 
@@ -78,8 +77,10 @@ class Food(Sprite):
 
         self.z = -1
         self.ang = random.uniform(0,math.pi*2)
+        self.staticAng = random.uniform(0,math.pi*2)
         self.angVel = sper(0.03)
-        self.radius = sper(0.01)
+        self.vel = random.uniform(sper(0.01),sper(0.02))
+        self.radius = sper(0.002)
         self.glowCD = 1
         self.grabbed = False
         self.timer = 10
@@ -89,7 +90,7 @@ class Food(Sprite):
             self.x, self.y = random.randint(xper(0.1),screenX-xper(0.1)), random.randint(yper(0.1),screenY-yper(0.1))
             reroll = False
             for piece in snake:
-                if getDist((piece.x,piece.y),(self.x,self.y)) < self.radius*10:
+                if getDist((piece.x,piece.y),(self.x,self.y)) < self.radius*20:
                     reroll = True
                     break
 
@@ -99,34 +100,67 @@ class Food(Sprite):
 
         if not manager[0].gameOver and not manager[0].pause:
             self.timer = max(self.timer - deltaT, 0)
-        self.glowCD = max(self.glowCD - deltaT, 0)
+            self.glowCD = max(self.glowCD - deltaT, 0)
 
-        if self.glowCD == 0:
-            self.glowCD = 0.2 if self.timer <= 2 else 0.5 if self.timer <= 5 else 1
+            if self.glowCD == 0:
+                self.glowCD = 0.2 if self.timer <= 2 else 0.5 if self.timer <= 5 else 1
 
-        if self.timer == 0 or self.grabbed:
-            self.radius -= deltaT*50
+            if self.timer == 0 or self.grabbed:
+                self.radius -= deltaT*25
+            elif self.radius < sper(0.01):
+                self.radius += deltaT*25
 
-        if self.radius < sper(0.002):
-            spritesToRemove.append(self)
+            if self.radius < sper(0.002):
+                spritesToRemove.append(self)
 
-        self.ang += self.angVel * deltaT
+            self.ang += self.angVel * deltaT
+            self.x += math.cos(self.staticAng)*self.vel * deltaT
+            self.y += math.sin(self.staticAng)*self.vel * deltaT
 
     def draw(self):
 
-        color = (0,255,255) if self.glowCD <= 0.1 else (100,0,0)
+        color = (255,255,255) if self.glowCD <= 0.1 else (100,0,0)
         for i in range(10):
-            pygame.draw.line(windowSurface, modifyColorPerc(color,2),(self.x + math.cos(self.ang - math.pi/2) * self.radius*(1-i*0.2), self.y + math.sin(self.ang - math.pi/2) * self.radius*(1-i*0.2)), (self.x + math.cos(self.ang) * self.radius*(1-i*0.2), self.y + math.sin(self.ang) * self.radius*(1-i*0.2)), int(self.radius/4))
+            pygame.draw.line(windowSurface, modifyColorPerc(color,2.5),(self.x + math.cos(self.ang - math.pi/2) * self.radius*(1-i*0.2), self.y + math.sin(self.ang - math.pi/2) * self.radius*(1-i*0.2)), (self.x + math.cos(self.ang) * self.radius*(1-i*0.2), self.y + math.sin(self.ang) * self.radius*(1-i*0.2)), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x + math.cos(self.ang) * self.radius, self.y + math.sin(self.ang) * self.radius), (self.x + math.cos(self.ang + math.pi/2) * self.radius, self.y + math.sin(self.ang + math.pi/2) * self.radius), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x + math.cos(self.ang + math.pi/2) * self.radius, self.y + math.sin(self.ang + math.pi/2) * self.radius), (self.x - math.cos(self.ang) * self.radius, self.y - math.sin(self.ang) * self.radius), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x - math.cos(self.ang) * self.radius, self.y - math.sin(self.ang) * self.radius), (self.x + math.cos(self.ang - math.pi/2) * self.radius, self.y + math.sin(self.ang - math.pi/2) * self.radius), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x + math.cos(self.ang - math.pi/2) * self.radius, self.y + math.sin(self.ang - math.pi/2) * self.radius), (self.x + math.cos(self.ang) * self.radius, self.y + math.sin(self.ang) * self.radius), int(self.radius/4))
 
+class Explosion(Sprite):
+
+    def __init__(self,x,y,radius,isChild):
+
+        self.z = -2
+        self.x = x
+        self.y = y
+        self.startRadius = radius
+        self.radius = self.startRadius
+        self.child = isChild
+        self.color = randColorInRange(125,255,125,255,125,255)
+
+    def process(self):
+
+        if not manager[0].gameOver and not manager[0].pause:
+            self.radius += deltaT*200
+            if self.radius > self.startRadius*12:
+                spritesToRemove.append(self)
+                if not self.child:
+                    for i in range(4):
+                        addSprite(Explosion(self.x+random.uniform(-sper(0.1),sper(0.1)),self.y+random.uniform(-sper(0.1),sper(0.1)),self.startRadius*(random.uniform(0.4,0.6)),True))
+
+    def draw(self):
+
+        pygame.draw.circle(windowSurface,self.color,(self.x,self.y),self.radius,int(self.radius/4))
+        r = random.uniform(0,2)
+        for i in range(1,31):
+            pygame.draw.line(windowSurface,self.color,(self.x + math.cos(math.pi*2*(i/30)+1) * self.radius*r, self.y + math.sin(math.pi*2*(i/30)+1) * self.radius*r),(self.x + math.cos(math.pi*2*i/30) * self.radius*2*r, self.y + math.sin(math.pi*2*i/30) * self.radius*2*r), int(self.radius/6))
+
 class Manager(Sprite):
 
     def __init__(self):
 
-        self.z = -2
+        self.z = -3
         self.showFPS = False
         self.fPressed = False
         self.pPressed = False
@@ -134,16 +168,19 @@ class Manager(Sprite):
         self.score = 0
         self.pause = False
         self.pauseBlinkCD = 0
+        self.roundStartCD = 2
 
         manager.append(self)
 
     def process(self):
 
+        self.roundStartCD = max(self.roundStartCD - deltaT, 0)
+
         if not snake:
             for i in range(5):
                 addSprite(SnakePiece(i))
 
-        if len(food) < 3:
+        if len(food) < 3 and self.roundStartCD == 0:
             addSprite(Food())
 
         if keys[pygame.K_ESCAPE]:
@@ -161,7 +198,7 @@ class Manager(Sprite):
                 self.pauseBlinkCD = 0
                 self.pPressed = True
 
-        if self.gameOver and mouseLeft:
+        if self.gameOver and (mouseLeft or keys[pygame.K_RETURN]):
             self.reset()
 
         if not keys[pygame.K_f]: self.fPressed = False
@@ -170,10 +207,12 @@ class Manager(Sprite):
     def draw(self):
 
         createTextLeft(tFont,'Score: %s' %(self.score),(255,255,255),None,xper(0.01),yper(0.02))
+        for i in range(5):
+            pygame.draw.circle(windowSurface,(100*(1+i*0.2),100*(1+i*0.2),min(255*(1+i*0.2),255)),(mouseX,mouseY),sper(0.0075)*(1-i*0.2))
 
         if self.gameOver:
             createTextCenter(bFont,'GAME OVER',(255,255,255),None,xper(0.5),yper(0.45))
-            createTextCenter(mFont,'Press LMB to Restart',(0,255,255),None,xper(0.5),yper(0.55))
+            createTextCenter(mFont,'Click to Restart',(0,255,255),None,xper(0.5),yper(0.55))
 
         if self.pause:
             self.pauseBlinkCD += deltaT
@@ -190,6 +229,7 @@ class Manager(Sprite):
             removeSprites()
         self.gameOver = False
         self.score = 0
+        self.roundStartCD = 2
 
 def xper(percentage):
     return percentage * screenX
@@ -199,6 +239,12 @@ def yper(percentage):
 
 def sper(percentage):
     return percentage * (screenX+screenY)/2
+
+def randColor():
+    return (random.randint(0,255), random.randint(0,255), random.randint(0,255))
+
+def randColorInRange(redLow, redHigh, greenLow, greenHigh, blueLow, blueHigh):
+    return (random.randint(redLow,redHigh), random.randint(greenLow,greenHigh), random.randint(blueLow,blueHigh))
 
 def modifyColorPerc(color, offset):
     return tuple(int(max(min(c*offset, 255), 0)) for c in color)
@@ -235,6 +281,8 @@ def removeSprites():
                 snake.remove(sprite)
             if sprite in food:
                 food.remove(sprite)
+                if sprite.grabbed:
+                    addSprite(Explosion(sprite.x,sprite.y,sprite.radius,False))
             sprites.remove(sprite)
             spritesToRemove.remove(sprite)
 
@@ -245,11 +293,14 @@ pygame.init()
 screenX = 1280
 screenY = 720
 windowSurface = pygame.display.set_mode((screenX, screenY), depth=32, display=0)
+# windowSurface = pygame.display.set_mode((screenX, screenY), depth=32, display=0, flags=pygame.FULLSCREEN)
 pygame.display.set_caption('Snake')
 
 bFont = pygame.font.Font(None, int(sper(0.128)))
 mFont = pygame.font.Font(None, int(sper(0.0512)))
 tFont = pygame.font.Font(None, int(sper(0.0192)))
+
+pygame.mouse.set_visible(False)
 
 deltaT = 0
 iniT = time.time()
@@ -278,7 +329,7 @@ while True:
     mouseX, mouseY = pygame.mouse.get_pos()
     mouseLeft, mouseMiddle, mouseRight = pygame.mouse.get_pressed()
 
-    windowSurface.fill((0,0,0))
+    windowSurface.fill((0,5,0))
 
     sprites.sort(key=lambda x: x.z, reverse=True)
 
