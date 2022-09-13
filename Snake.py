@@ -51,10 +51,14 @@ class SnakePiece(Sprite):
         pygame.draw.circle(windowSurface, self.color, (self.x, self.y), self.radius)
 
         if self.id == 0:
-            pygame.draw.circle(windowSurface, (255,255,255), (self.x + math.cos(self.ang) * self.radius*0.4 + math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.4 + math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.4)
-            pygame.draw.circle(windowSurface, (255,255,255), (self.x + math.cos(self.ang) * self.radius*0.4 - math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.4 - math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.4)
-            pygame.draw.circle(windowSurface, (100,0,0), (self.x + math.cos(self.ang) * self.radius*0.55 + math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.55 + math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.2)
-            pygame.draw.circle(windowSurface, (100,0,0), (self.x + math.cos(self.ang) * self.radius*0.55 - math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.55 - math.sin(self.ang + math.pi/2) * self.radius*0.5), self.radius*0.2)
+            eye1 = self.x + math.cos(self.ang) * self.radius*0.4 + math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.4 + math.sin(self.ang + math.pi/2) * self.radius*0.5
+            eye2 = self.x + math.cos(self.ang) * self.radius*0.4 - math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.4 - math.sin(self.ang + math.pi/2) * self.radius*0.5
+            pupil1 = self.x + math.cos(self.ang) * self.radius*0.55 + math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.55 + math.sin(self.ang + math.pi/2) * self.radius*0.5
+            pupil2 = self.x + math.cos(self.ang) * self.radius*0.55 - math.cos(self.ang + math.pi/2) * self.radius*0.5, self.y + math.sin(self.ang) * self.radius*0.55 - math.sin(self.ang + math.pi/2) * self.radius*0.5
+            pygame.draw.circle(windowSurface, (255,255,255), eye1, self.radius*0.4)
+            pygame.draw.circle(windowSurface, (100,0,0), pupil1, self.radius*0.2)
+            pygame.draw.circle(windowSurface, (255,255,255), eye2, self.radius*0.4)
+            pygame.draw.circle(windowSurface, (100,0,0), pupil2, self.radius*0.2)
 
     def checkHeadCol(self):
 
@@ -119,9 +123,9 @@ class Food(Sprite):
 
     def draw(self):
 
-        color = (255,255,255) if self.glowCD <= 0.1 else (100,0,0)
+        color = (255,255,255) if self.glowCD <= 0.1 else (125,0,0)
         for i in range(10):
-            pygame.draw.line(windowSurface, modifyColorPerc(color,2.5),(self.x + math.cos(self.ang - math.pi/2) * self.radius*(1-i*0.2), self.y + math.sin(self.ang - math.pi/2) * self.radius*(1-i*0.2)), (self.x + math.cos(self.ang) * self.radius*(1-i*0.2), self.y + math.sin(self.ang) * self.radius*(1-i*0.2)), int(self.radius/4))
+            pygame.draw.line(windowSurface, modifyColorPerc(color,1+i*0.11),(self.x + math.cos(self.ang - math.pi/2) * self.radius*(1-i*0.2), self.y + math.sin(self.ang - math.pi/2) * self.radius*(1-i*0.2)), (self.x + math.cos(self.ang) * self.radius*(1-i*0.2), self.y + math.sin(self.ang) * self.radius*(1-i*0.2)), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x + math.cos(self.ang) * self.radius, self.y + math.sin(self.ang) * self.radius), (self.x + math.cos(self.ang + math.pi/2) * self.radius, self.y + math.sin(self.ang + math.pi/2) * self.radius), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x + math.cos(self.ang + math.pi/2) * self.radius, self.y + math.sin(self.ang + math.pi/2) * self.radius), (self.x - math.cos(self.ang) * self.radius, self.y - math.sin(self.ang) * self.radius), int(self.radius/4))
         pygame.draw.line(windowSurface, color, (self.x - math.cos(self.ang) * self.radius, self.y - math.sin(self.ang) * self.radius), (self.x + math.cos(self.ang - math.pi/2) * self.radius, self.y + math.sin(self.ang - math.pi/2) * self.radius), int(self.radius/4))
@@ -136,25 +140,29 @@ class Explosion(Sprite):
         self.y = y
         self.startRadius = radius
         self.radius = self.startRadius
-        self.child = isChild
-        self.color = randColorInRange(125,255,125,255,125,255)
+        self.isChild = isChild
+        self.type = random.randint(0,1)
+        self.color = randColorInRange(155,255,155,255,155,255)
 
     def process(self):
 
         if not manager[0].gameOver and not manager[0].pause:
-            self.radius += deltaT*200
-            if self.radius > self.startRadius*12:
+            self.radius += deltaT*60
+            if self.radius > self.startRadius*13:
                 spritesToRemove.append(self)
-                if not self.child:
-                    for i in range(4):
-                        addSprite(Explosion(self.x+random.uniform(-sper(0.1),sper(0.1)),self.y+random.uniform(-sper(0.1),sper(0.1)),self.startRadius*(random.uniform(0.4,0.6)),True))
+                if not self.isChild:
+                    for i in range(3):
+                        addSprite(Explosion(self.x+random.uniform(-sper(0.15),sper(0.15)),self.y+random.uniform(-sper(0.15),sper(0.15)),self.startRadius*(random.uniform(0.5,0.7)),True))
 
     def draw(self):
 
-        pygame.draw.circle(windowSurface,self.color,(self.x,self.y),self.radius,int(self.radius/4))
-        r = random.uniform(0,2)
+        e1 = random.uniform(0,3)
         for i in range(1,31):
-            pygame.draw.line(windowSurface,self.color,(self.x + math.cos(math.pi*2*(i/30)+1) * self.radius*r, self.y + math.sin(math.pi*2*(i/30)+1) * self.radius*r),(self.x + math.cos(math.pi*2*i/30) * self.radius*2*r, self.y + math.sin(math.pi*2*i/30) * self.radius*2*r), int(self.radius/6))
+            e2 = random.uniform(0,3)
+            e = (e1 if self.type == 0 else e2)
+            lineStart = self.x + math.cos(math.pi*2*((i+10)/30)) * self.radius*e, self.y + math.sin(math.pi*2*((i+10)/30)) * self.radius*e
+            lineEnd = self.x + math.cos(math.pi*2*i/30) * self.radius*e, self.y + math.sin(math.pi*2*i/30) * self.radius*e
+            pygame.draw.line(windowSurface,self.color,lineStart,lineEnd, int(self.radius/7))
 
 class Manager(Sprite):
 
